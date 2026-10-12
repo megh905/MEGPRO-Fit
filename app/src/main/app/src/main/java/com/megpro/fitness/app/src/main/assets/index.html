@@ -1,0 +1,88 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MEGPRO Fitness</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;font-family:Arial,sans-serif;background:#10141c;color:#fff;padding:20px}
+header{padding:18px 0}
+.logo{font-size:27px;font-weight:900;color:#a3ff4f}
+.sub{color:#a8b0bf;font-size:13px;margin-top:6px}
+h2{font-size:21px;margin-top:28px}
+.card{background:#1d2430;padding:18px;border-radius:16px;margin:14px 0}
+.row{display:flex;justify-content:space-between;gap:12px}
+.value{font-size:27px;font-weight:bold;margin-top:8px}
+small{color:#a8b0bf}
+button{background:#a3ff4f;color:#10141c;border:0;border-radius:10px;padding:13px;font-weight:bold;width:100%;margin-top:10px;font-size:15px}
+input{width:100%;padding:12px;border-radius:8px;border:1px solid #444;background:#10141c;color:white;margin-top:10px}
+.item{padding:14px;background:#262f3d;border-radius:10px;margin-top:10px}
+footer{text-align:center;color:#8e98a8;font-size:12px;margin:30px 0}
+</style>
+</head>
+<body>
+<header>
+<div class="logo">MEGPRO FITNESS</div>
+<div class="sub">YOUR FITNESS. YOUR DISCIPLINE.</div>
+</header>
+
+<div class="card">
+<small>YOUR DAILY PROGRESS</small>
+<div class="value" id="streak">0 Day Streak 🔥</div>
+<p>Build consistency, one day at a time.</p>
+<button onclick="completeDay()">COMPLETE TODAY ✓</button>
+</div>
+
+<h2>Today's Goals</h2>
+<div class="card">
+<div class="row"><span>Workout 🏋️</span><input type="checkbox" id="workout" style="width:22px"></div>
+<div class="row"><span>Drink enough water 💧</span><input type="checkbox" id="water" style="width:22px"></div>
+<div class="row"><span>Follow diet 🥗</span><input type="checkbox" id="diet" style="width:22px"></div>
+<button onclick="saveGoals()">SAVE GOALS</button>
+</div>
+
+<h2>Daily Notes</h2>
+<div class="card">
+<textarea id="notes" placeholder="Write today's progress..." style="width:100%;height:100px;background:#10141c;color:white;padding:12px;border-radius:8px"></textarea>
+<button onclick="saveNotes()">SAVE NOTES</button>
+</div>
+
+<h2>My Progress</h2>
+<div class="card">
+<div class="row"><span>Completed days</span><strong id="days">0</strong></div>
+<div class="row" style="margin-top:15px"><span>Last completed</span><strong id="last">—</strong></div>
+</div>
+
+<footer>MEGPRO FITNESS • STAY CONSISTENT</footer>
+
+<script>
+const today=()=>new Date().toISOString().slice(0,10);
+function load(){
+let s=JSON.parse(localStorage.getItem('megpro')||'{}');
+document.getElementById('streak').textContent=(s.streak||0)+' Day Streak 🔥';
+document.getElementById('days').textContent=s.days||0;
+document.getElementById('last').textContent=s.last||'—';
+document.getElementById('notes').value=s.notes||'';
+['workout','water','diet'].forEach(k=>document.getElementById(k).checked=!!(s.goals&&s.goals[k]));
+}
+function getData(){return JSON.parse(localStorage.getItem('megpro')||'{}')}
+function putData(s){localStorage.setItem('megpro',JSON.stringify(s))}
+function completeDay(){
+let s=getData(),t=today();
+if(s.last===t){alert('Today is already completed!');return}
+let yesterday=new Date();yesterday.setDate(yesterday.getDate()-1);
+s.streak=s.last===yesterday.toISOString().slice(0,10)?(s.streak||0)+1:1;
+s.days=(s.days||0)+1;s.last=t;putData(s);load();
+}
+function saveGoals(){
+let s=getData();s.goals={};
+['workout','water','diet'].forEach(k=>s.goals[k]=document.getElementById(k).checked);
+putData(s);alert('Goals saved!');
+}
+function saveNotes(){let s=getData();s.notes=document.getElementById('notes').value;putData(s);alert('Notes saved!')}
+load();
+</script>
+</body>
+</html>
