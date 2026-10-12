@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MEGPRO Fitness</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;padding:20px;font-family:Arial,sans-serif;background:#10141c;color:#fff}
+header{padding:18px 0}
+.logo{font-size:27px;font-weight:900;color:#a3ff4f}
+.sub{color:#a8b0bf;font-size:13px;margin-top:6px}
+h2{font-size:21px;margin-top:28px}
+.card{background:#1d2430;padding:18px;border-radius:16px;margin:14px 0}
+.row{display:flex;justify-content:space-between;gap:12px;align-items:center}
+.value{font-size:27px;font-weight:bold;margin-top:8px}
+small{color:#a8b0bf}
+button{background:#a3ff4f;color:#10141c;border:0;border-radius:10px;padding:13px;font-weight:bold;font-size:15px;cursor:pointer}
+button:disabled{opacity:.5}
+input{width:100%;padding:12px;border-radius:8px;border:1px solid #444;background:#10141c;color:white;margin:8px 0}
+.item{padding:14px;background:#262f3d;border-radius:10px;margin-top:10px}
+footer{text-align:center;color:#8e98a8;font-size:12px;margin:30px 0}
+</style>
+</head>
+<body>
+<header>
+<div class="logo">MEGPRO FITNESS</div>
+<div class="sub">YOUR FITNESS. YOUR DISCIPLINE.</div>
+</header>
+
+<div class="card">
+<small>YOUR DAILY PROGRESS</small>
+<div class="value" id="streak">0 Day Streak 🔥</div>
+<p id="message">Build consistency, one day at a time.</p>
+<button id="completeBtn" onclick="completeDay()">COMPLETE TODAY ✓</button>
+</div>
+
+<div class="card">
+<div class="row"><strong>80 DAY CHALLENGE</strong><strong id="progressText">0 / 80</strong></div>
+<div style="background:#394352;height:12px;border-radius:10px;margin-top:14px;overflow:hidden">
+<div id="progress" style="height:100%;width:0%;background:#a3ff4f"></div>
+</div>
+<p id="remaining">80 days remaining</p>
+</div>
+
+<h2>Daily Habits</h2>
+<div class="card">
+<label><input type="checkbox" class="habit"> Workout</label>
+<label><input type="checkbox" class="habit"> Healthy diet</label>
+<label><input type="checkbox" class="habit"> Drink enough water</label>
+<label><input type="checkbox" class="habit"> Sleep on time</label>
+</div>
+
+<h2>Today's Notes</h2>
+<div class="card">
+<input id="notes" placeholder="Write today's progress...">
+<button onclick="saveNotes()">SAVE NOTES</button>
+<p id="noteStatus"></p>
+</div>
+
+<h2>Backup & Reports</h2>
+<div class="card">
+<p>Download your streak data and daily notes.</p>
+<button onclick="downloadData()">DOWNLOAD DATA (JSON)</button>
+<button style="margin-top:10px" onclick="downloadPDF()">DOWNLOAD REPORT (PDF)</button>
+</div>
+
+<footer>MEGPRO FITNESS · Stay consistent 💪</footer>
+
+<script>
+const today=()=>new Date().toLocaleDateString('en-CA');
+let data;
+try{data=JSON.parse(localStorage.getItem('megproData'))||{days:[],notes:{}}}
+catch(e){data={days:[],notes:{}}}
+
+function save(){localStorage.setItem('megproData',JSON.stringify(data))}
+function render(){
+const n=data.days.length;
+document.getElementById('streak').textContent=n+' Day Streak 🔥';
+document.getElementById('progressText').textContent=Math.min(n,80)+' / 80';
+document.getElementById('progress').style.width=Math.min(n/80*100,100)+'%';
+document.getElementById('remaining').textContent=Math.max(80-n,0)+' days remaining';
+document.getElementById('completeBtn').disabled=data.days.includes(today());
+document.getElementById('message').textContent=data.days.includes(today())?'Today completed. Great work!':'Build consistency, one day at a time.';
+document.getElementById('notes').value=data.notes[today()]||'';
+}
+function completeDay(){
+if(data.days.includes(today()))return;
+data.days.push(today());save();render();
+}
+function saveNotes(){
+data.notes[today()]=document.getElementById('notes').value;
+save();document.getElementById('noteStatus').textContent='Notes saved!';
+}
+function downloadData(){
+const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='MEGPRO-data.json';a.click();URL.revokeObjectURL(a.href);
+}
+function downloadPDF(){
+const n=data.days.length;
+const lines=['MEGPRO FITNESS REPORT','','Generated: '+today(),'Completed days: '+n,'80-day challenge: '+Math.min(n,80)+'/80','','COMPLETED DATES',...data.days,'','DAILY NOTES',...Object.entries(data.notes).map(([d,v])=>d+': '+v)];
+const escape=s=>s.replace(/\\/g,'\\\\').replace(/\(/g,'\\(').replace(/\)/g,'\\)');
+const chunks=[];
+for(let i=0;i<lines.length;i+=42)chunks.push(lines.slice(i,i+42));
+let objects=['<< /Type /Catalog /Pages 2 0 R >>',''];
+const pageRefs=[];
+chunks.forEach((chunk,i)=>{
+const pageId=3+i*2,contentId=pageId+1;pageRefs.push(pageId+' 0 R');
+const stream='BT /F1 11 Tf 50 790 Td 15 TL '+chunk.map((s,j)=>(j?'T* ':'')+'('+escape(s)+') Tj').join(' ')+' ET';
+objects.push('<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 << /Type /Font /Subtype /Type1 /BaseFont /Helvetica >> >> >> /Contents '+contentId+' 0 R >>');
+objects.push('<< /Length '+stream.length+' >>\nstream\n'+stream+'\nendstream');
+});
+objects[1]='<< /Type /Pages /Kids ['+pageRefs.join(' ')+'] /Count '+chunks.length+' >>';
+let pdf='%PDF-1.4\n',offsets=[0];
+objects.forEach((o,i)=>{offsets.push(pdf.length);pdf+=(i+1)+' 0 obj\n'+o+'\nendobj\n'});
+const xref=pdf.length;pdf+='xref\n0 '+(objects.length+1)+'\n0000000000 65535 f \n';
+for(let i=1;i<offsets.length;i++)pdf+=String(offsets[i]).padStart(10,'0')+' 00000 n \n';
+pdf+='trailer\n<< /Size '+(objects.length+1)+' /Root 1 0 R >>\nstartxref\n'+xref+'\n%%EOF';
+const blob=new Blob([pdf],{type:'application/pdf'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='MEGPRO-report.pdf';a.click();URL.revokeObjectURL(a.href);
+}
+render();
+</script>
+</body>
+</html>
